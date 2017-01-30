@@ -14,7 +14,7 @@
  * Add palettes to tl_module
  */
 #$GLOBALS['TL_DCA']['tl_module']['palettes']['iso_cumulativefilter']         = '{title_legend},name,headline,type;{config_legend},iso_category_scope,iso_list_where,iso_newFilter,iso_cumulativeFields,iso_filterHideSingle;{template_legend},customTpl,navigationTpl,iso_includeMessages,iso_hide_list;{redirect_legend},jumpTo;{reference_legend:hide},defineRoot;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['iso_cumulativefilter'] = str_replace(
+$GLOBALS['TL_DCA']['tl_module']['palettes']['iso_connectedfilter'] = str_replace(
 	'iso_cumulativeFields,',
 	'iso_cumulativeFields, iso_connectedFilterModules,',
 	$GLOBALS['TL_DCA']['tl_module']['palettes']['iso_cumulativefilter']
