@@ -41,8 +41,6 @@ class ConnectedCumulativeFilter extends CumulativeFilter
     {
         parent::__construct($objModule, $strColumn);
         
-        file_put_contents("/var/www/contao.log","\n\n\n\n\n\n\n\n###############\n\n\n\nmodule id is: ".print_r($this->id,true),FILE_APPEND);
-        
         $this->iso_connectedFilterModules = deserialize($this->iso_connectedFilterModules);
 
         if(!in_array($this->id,$this->iso_connectedFilterModules))
@@ -52,15 +50,12 @@ class ConnectedCumulativeFilter extends CumulativeFilter
        		$arrTemp[] = $this->id;
 			$this->iso_connectedFilterModules = $arrTemp;
 		}
-
-#		file_put_contents("/var/www/contao.log","\n\n\nraw data: ".print_r($this->iso_connectedFilterModules,true),FILE_APPEND);        
 			
 		$this->activeFilters = Isotope::getRequestCache()->getFiltersForModules($this->iso_connectedFilterModules);
-			
-        
+       
     }
 	
-	    /**
+    /**
      * Compile the module
      */
     protected function compile()
@@ -92,7 +87,6 @@ class ConnectedCumulativeFilter extends CumulativeFilter
 					$this->addFilter($this->activeFilters, $attribute, $value),
 					$intModuleId
 				);
-				file_put_contents("/var/www/contao.log",print_r($this->addFilter($this->activeFilters, $attribute, $value),true),FILE_APPEND);
 			}
         } else {
 			foreach($this->iso_connectedFilterModules as $intModuleId)
