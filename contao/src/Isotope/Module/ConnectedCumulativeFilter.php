@@ -4,6 +4,8 @@
  * Isotope eCommerce for Contao Open Source CMS
  *
  * Copyright (C) 2009-2016 terminal42 gmbh & Isotope eCommerce Workgroup
+ * 
+ * @author Henry Lamorski <henry.lamorski@mailbox.org>
  *
  * @link       https://isotopeecommerce.org
  * @license    https://opensource.org/licenses/lgpl-3.0.html
@@ -11,6 +13,18 @@
 
 namespace Isotope\Module;
 
+use Haste\Generator\RowClass;
+use Haste\Input\Input;
+use Haste\Util\Url;
+use Isotope\Interfaces\IsotopeAttributeWithOptions;
+use Isotope\Interfaces\IsotopeFilterModule;
+use Isotope\Isotope;
+use Isotope\Model\Attribute;
+use Isotope\Model\Product;
+use Isotope\RequestCache\CsvFilter;
+use Isotope\RequestCache\Filter;
+use Isotope\RequestCache\FilterQueryBuilder;
+use Isotope\Template;
 /**
  * @property array $iso_cumulativeFields
  */
@@ -23,22 +37,46 @@ class ConnectedCumulativeFilter extends CumulativeFilter
      * @param object $objModule
      * @param string $strColumn
      */
-    public function __construct($objModule, $strColumn = 'main')
+	public function __construct($objModule, $strColumn = 'main')
     {
+        parent::__construct($objModule, $strColumn);
+        
+        file_put_contents("/var/www/contao.log","\n\n\n\n\n\n\n\n###############\n\n\n\nmodule id is: ".print_r($this->id,true),FILE_APPEND);
+        
+        $this->iso_connectedFilterModules = deserialize($this->iso_connectedFilterModules);
 
-		$this->iso_connectedFilterModules[] = $this->id; 
+        if(!in_array($this->id,$this->iso_connectedFilterModules))
+        {
+			/** $this->iso_connectedFilterModules is not writeabel here **/
+			$arrTemp = $this->iso_connectedFilterModules;
+       		$arrTemp[] = $this->id;
+			$this->iso_connectedFilterModules = $arrTemp;
+		}
 
-		/*
-        if(!in_array(80,$this->iso_connectedFilterModules))
-			$this->iso_connectedFilterModules[] = 80;
-		if(!in_array(81,$this->iso_connectedFilterModules))
-			$this->iso_connectedFilterModules[] = 81;
-        */
-		file_put_contents("/var/www/contao.log","\n\nfilter modules: ".print_r($this->iso_connectedFilterModules,true),FILE_APPEND);
-		
-		parent::__construct($objModule, $strColumn);
-	}
+#		file_put_contents("/var/www/contao.log","\n\n\nraw data: ".print_r($this->iso_connectedFilterModules,true),FILE_APPEND);        
+			
+		$this->activeFilters = Isotope::getRequestCache()->getFiltersForModules($this->iso_connectedFilterModules);
+			
+        
+    }
 	
+	    /**
+     * Compile the module
+     */
+    protected function compile()
+    {
+        $arrFilter = explode(';', base64_decode(\Input::get('cumulativefilter', true)), 4);
+
+        if ($arrFilter[0] == $this->id && isset($this->iso_cumulativeFields[$arrFilter[2]])) {
+            $this->saveFilter($arrFilter[1], $arrFilter[2], $arrFilter[3]);
+            return;
+        }
+
+        $this->generateFilter();
+
+        $this->Template->linkClearAll  = ampersand(preg_replace('/\?.*/', '', \Environment::get('request')));
+        $this->Template->labelClearAll = $GLOBALS['TL_LANG']['MSC']['clearFiltersLabel'];
+    }
 	
 	 /**
      * @param string $action
@@ -76,6 +114,53 @@ class ConnectedCumulativeFilter extends CumulativeFilter
                 Url::removeQueryString(array('cumulativefilter'), ($this->jumpTo ?: null))
             )
         );
+    }
+    
+       /**
+     * @param Filter[] $filters
+     * @param string   $attribute
+     * @param string   $value
+     *
+     * @return Filter[]
+     */
+    private function addFilter(array $filters, $attribute, $value)
+    {
+        if ($this->isCsv($attribute)) {
+            $filter = CsvFilter::attribute($attribute)->contains($value);
+        } else {
+            $filter = Filter::attribute($attribute)->isEqualTo($value);
+        }
+
+        if (!$this->isMultiple($attribute) || self::QUERY_OR === $this->iso_cumulativeFields[$attribute]['queryType']) {
+            $group = 'cumulative_' . $attribute;
+            $filter->groupBy($group);
+
+            if (self::QUERY_AND === $this->iso_cumulativeFields[$attribute]['queryType']) {
+                foreach ($filters as $k => $oldFilter) {
+                    if ($oldFilter->getGroup() == $group) {
+                        unset($filters[$k]);
+                    }
+                }
+            }
+        }
+
+        $filters[$this->generateFilterKey($attribute, $value)] = $filter;
+
+        return $filters;
+    }
+    
+    
+	/**
+     * Generates a filter key for the field and value.
+     *
+     * @param string $field
+     * @param string $value
+     *
+     * @return string
+     */
+    public function generateFilterKey($field, $value)
+    {
+        return $field . '=' . $value;
     }
 	
 }
