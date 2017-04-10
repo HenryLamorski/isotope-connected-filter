@@ -100,14 +100,22 @@ class ConnectedCumulativeFilter extends CumulativeFilter
 
         $objCache = Isotope::getRequestCache()->saveNewConfiguration();
 
-        // Include \Environment::base or the URL would not work on the index page
-        \Controller::redirect(
-            \Environment::get('base') .
+        $strLocation = \Environment::get('base') .
             Url::addQueryString(
                 'isorc='.$objCache->id,
                 Url::removeQueryString(array('cumulativefilter'), ($this->jumpTo ?: null))
-            )
-        );
+            );
+            
+        // pjax
+        if(isset($_SERVER['HTTP_X_PJAX'])) {
+            header('HTTP/1.1 302 Found');
+            header('Location: ' . $strLocation);
+            header('X-PJAX-URL: ' . $strLocation);
+            exit();
+        }
+
+        // Include \Environment::base or the URL would not work on the index page
+        \Controller::redirect($strLocation);
     }
     
        /**
